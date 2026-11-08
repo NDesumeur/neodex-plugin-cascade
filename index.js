@@ -313,7 +313,7 @@ function caDraw() {
   ca.pops.forEach((p, i) => { const y = CA.Y + 120 - (70 - p.t) * .5 - i * 22; g.globalAlpha = Math.min(1, p.t / 20); gameText(g, CA.COLS * S + 20, [[p.text, '#ffffff', 7], ['+' + p.pts, '#ffd07a', 7]], y); g.globalAlpha = 1; });
   g.restore();
   g.fillStyle = `hsl(${hue},60%,70%)`; g.font = '8px "Press Start 2P", monospace'; g.fillText('CASCADE', CA.X, 16);
-  if (ca.mode === 'ready') gameText(g, CA.W, [[ca.lv ? 'DÉFI ' + (ca.levelIdx + 1) + ' : ' + ca.lv[0].toUpperCase() : ca.kind === 'zen' ? 'MODE ZEN' : 'MARATHON', '#ff5ad9', 8], [ca.goal ? caGoalText(ca.goal) : 'Lignes et fusions de 7', '#d9c6ff', 7], ['ESPACE OU CLIC POUR JOUER', '#ffffff', 7]], 140);
+  if (ca.mode === 'ready') gameText(g, CA.W, [[ca.lv ? 'DÉFI ' + (ca.levelIdx + 1) + ' : ' + ca.lv[0].toUpperCase() : ca.kind === 'zen' ? 'MODE ZEN' : 'MARATHON', '#ff5ad9', 8], [ca.goal ? caGoalText(ca.goal) : 'Lignes et fusions de 9', '#d9c6ff', 7], ['ESPACE OU CLIC POUR JOUER', '#ffffff', 7]], 140);
   if (ca.mode === 'pause') gameText(g, CA.W, [['PAUSE', '#ffd07a', 10], ['ESPACE POUR REPRENDRE', '#d9c6ff', 7]], 150);
   if (ca.mode === 'over') gameText(g, CA.W, ca.kind === 'challenge' ? (ca.won ? [['DÉFI RÉUSSI', '#8ee8a0', 10], ['', '#ffd07a', 10], [ca.levelIdx < CA_LEVELS.length - 1 ? 'ESPACE : DÉFI SUIVANT' : 'TOUS LES DÉFIS !', '#ffffff', 7]]
     : [['RATÉ', '#ff4f6d', 10], [ca.score + ' POINTS', '#ffd07a', 8], ['ESPACE : RÉESSAYER', '#ffffff', 7]]) : [['FIN DE PARTIE', '#ff4f6d', 10], [ca.score + ' POINTS' + (ca.record ? ' · RECORD !' : ''), '#ffd07a', 8], ['ESPACE : REJOUER', '#ffffff', 7]], 140);
