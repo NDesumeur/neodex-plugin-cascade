@@ -1,7 +1,7 @@
 {
   "id": "neodex.cascade",
   "name": "Cascade",
-  "version": "1.1.3",
+  "version": "1.1.4",
   "author": "NDesumeur",
   "description": "Des pièces de 3 à 5 blocs tombent dans un puits de 10 × 20 : complète des lignes pour les casser, mais aussi des groupes de 9 blocs de la même couleur. Ce qui reste suspendu retombe et peut déclencher des chaînes qui multiplient les points ; bombes, cristaux et réserve. Marathon qui accélère toutes les 8 lignes, Zen sans accélération, et 24 défis à trois étoiles.",
   "icon": "icon.png",
