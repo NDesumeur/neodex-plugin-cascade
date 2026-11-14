@@ -12,6 +12,8 @@ A falling-blocks game with one extra idea: besides full rows, groups of 9 blocks
 - **Space**: hard drop (2 points per cell); a ghost shows where the piece will land.
 - **C** or **Shift**: put the piece on hold, or take back the held one (once per piece).
 - **P** or **Escape**: pause. **Space** or a click starts the game.
+- **Gamepad**: d-pad or left stick to move, **down** to soft drop, **up** to hard drop, **A** and **B** to rotate (one way, the other), **X**, **LB** or **RB** to hold, **Start** to pause.
+- **SOUND**: all (effects and music), effects only, or off. **FULLSCREEN**: the well fills the screen.
 
 ## The pieces
 
@@ -21,7 +23,7 @@ The well is 10 columns by 20 rows. Pieces have 3 to 5 blocks (bars, corners, squ
 
 - **A full row** breaks, as usual.
 - **A fusion**: any group of at least 9 touching blocks of the same colour breaks too, wherever it is.
-- **Chains**: after a break, blocks no longer resting on anything fall one by one. If they form new rows or fusions, that is a chain, and each link multiplies the points.
+- **Chains**: after a break, blocks no longer resting on anything fall one by one. If they form new rows or fusions, that is a chain, and each link multiplies the points. The well flashes, shakes, and a big "CHAIN ×2" (×3, ×4…) shows up.
 - **Bombs**: one piece in 22 carries a bomb; when it breaks, it blows up the 3 × 3 square around it.
 - **Crystals** (in some challenges) only break with a full row, not by fusion or bomb.
 

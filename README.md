@@ -12,6 +12,8 @@ Un jeu de blocs qui tombent, avec une idée en plus : en plus des lignes pleines
 - **Espace** : poser d'un coup (2 points par case) ; une ombre montre où la pièce va tomber.
 - **C** ou **Maj** : mettre la pièce en réserve, ou reprendre celle qui y est (une fois par pièce).
 - **P** ou **Échap** : pause. **Espace** ou un clic lance la partie.
+- **Manette** : croix ou stick gauche pour déplacer, **bas** pour descendre vite, **haut** pour poser d'un coup, **A** et **B** pour tourner (un sens, l'autre), **X**, **LB** ou **RB** pour la réserve, **Start** pour la pause.
+- **SON** : tout (effets et musique), effets seulement, ou coupé. **PLEIN ÉCRAN** : le puits prend tout l'écran.
 
 ## Les pièces
 
@@ -21,7 +23,7 @@ Le puits fait 10 colonnes sur 20 lignes. Les pièces font de 3 à 5 blocs (barre
 
 - **Une ligne pleine** se casse, comme d'habitude.
 - **Une fusion** : tout groupe d'au moins 9 blocs de la même couleur qui se touchent se casse aussi, où qu'il soit.
-- **Les chaînes** : après une casse, les blocs qui ne reposent plus sur rien retombent un par un. S'ils forment de nouvelles lignes ou fusions, c'est une chaîne, et chaque maillon multiplie les points.
+- **Les chaînes** : après une casse, les blocs qui ne reposent plus sur rien retombent un par un. S'ils forment de nouvelles lignes ou fusions, c'est une chaîne, et chaque maillon multiplie les points. Le puits flashe, tremble, et un grand « CHAÎNE ×2 » (×3, ×4…) s'affiche.
 - **Les bombes** : une pièce sur 22 porte une bombe ; quand elle se casse, elle fait sauter le carré de 3 × 3 autour d'elle.
 - **Les cristaux** (dans certains défis) ne se cassent qu'avec une ligne pleine, ni par fusion ni par bombe.
 

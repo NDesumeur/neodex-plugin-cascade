@@ -1,10 +1,12 @@
 // Cascade : ton appli d'origine (HTML et code inchangés), livrée en plugin.
 // Ses données sont dans le dossier du plugin, que NeoDex sauvegarde (synchro cloud et sauvegardes) ; à la première ouverture elle reprend ce que tu avais dans NeoDex.
 // Elle tourne dans le bac à sable de NeoDex, avec ses outils d'interface (ctx.host) et seulement les autorisations de son plugin.json.
-const HTML = "<div class=\"appWrap\">\n      <div class=\"agHead\"><span class=\"label\">Cascade</span><span class=\"hint\" id=\"caInfo\"></span><div class=\"agNav\"><select class=\"f gSel\" id=\"caMode\" title=\"Mode de jeu\"></select></div></div>\n      <div class=\"gameBox tall\"><canvas id=\"caCanvas\" width=\"240\" height=\"320\" tabindex=\"0\"></canvas></div>\n      <div class=\"hint\">← → ou Q D : déplacer · ↑, X ou W : tourner (Z : dans l'autre sens) · ↓ : descendre vite · espace : poser d'un coup · C ou Maj : réserve · P ou Échap : pause. Une ligne pleine se casse, et aussi tout groupe de 9 blocs de la même couleur (fusion). Les blocs qui pendent retombent ensuite un par un : de nouvelles lignes ou fusions font des chaînes qui multiplient les points. Les cristaux ne se cassent qu'avec une ligne ; une bombe fait sauter le carré autour d'elle. Marathon, Zen ou 24 défis à trois étoiles, sauvegardés et synchronisés.</div>\n    </div>";
+const HTML = "<div class=\"appWrap\">\n      <div class=\"agHead\"><span class=\"label\">Cascade</span><span class=\"hint\" id=\"caInfo\"></span><div class=\"agNav\"><select class=\"f gSel\" id=\"caMode\" title=\"Mode de jeu\"></select></div></div>\n      <div class=\"gameBox tall\"><canvas id=\"caCanvas\" width=\"240\" height=\"320\" tabindex=\"0\"></canvas></div>\n      <div class=\"row\" style=\"justify-content:center;margin-top:8px\"><button class=\"btn px\" id=\"caSnd\">SON : TOUT</button><button class=\"btn px\" id=\"caFs\">PLEIN ÉCRAN</button></div>\n      <div class=\"hint\">← → ou Q D : déplacer · ↑, X ou W : tourner (Z : dans l'autre sens) · ↓ : descendre vite · espace : poser d'un coup · C ou Maj : réserve · P ou Échap : pause. Manette : croix ou stick pour déplacer, bas pour descendre vite, haut pour poser d'un coup, A et B pour tourner, X ou les gâchettes pour la réserve, Start pour la pause. Une ligne pleine se casse, et aussi tout groupe de 9 blocs de la même couleur (fusion). Les blocs qui pendent retombent ensuite un par un : de nouvelles lignes ou fusions font des chaînes qui multiplient les points. Les cristaux ne se cassent qu'avec une ligne ; une bombe fait sauter le carré autour d'elle. Marathon, Zen ou 24 défis à trois étoiles, sauvegardés et synchronisés.</div>\n    </div>";
 /*CSS-MOVED*/ const CSS = `.gameBox{display:grid;place-items:center;padding:10px;background:#05010b;box-shadow:0 0 0 3px var(--line2)}
 .gameBox canvas{width:min(100%,1152px);aspect-ratio:384/144;image-rendering:pixelated;cursor:var(--cp,pointer)}
-.gameBox.tall canvas{width:auto;height:min(720px,72vh);aspect-ratio:240/320}
+.gameBox.tall canvas{width:min(100%,max(240px,calc((100vh - 270px) * 240 / 320)));height:auto;aspect-ratio:240/320}
+.gameBox:fullscreen{padding:0;display:grid;place-items:center;background:#05010b}
+.gameBox.tall:fullscreen canvas{width:min(100vw,calc(100vh * 240 / 320))}
 .gSel{width:auto;font-size:14px;padding:6px 10px;margin-right:8px}
 .tqTile.hole{transition:opacity .4s}
 `;  // le style de ce plugin (il utilise les variables du thème de NeoDex)
@@ -79,6 +81,49 @@ const CA_LEVELS = [
 const caSave = () => gstore('cascade', {best: {}, stars: {}, rows: 0, games: 0, chain: 0});
 const caGoalText = g => g.rows ? g.rows + ' lignes' + (g.pieces ? ' en ' + g.pieces + ' pièces' : '') : g.gems ? 'Casser ' + g.gems + ' cristaux' : g.fusions ? g.fusions + ' fusions' : g.chain ? 'Une chaîne de ' + g.chain : g.score + ' points en ' + Math.round(g.time / 60) + ' min';
 let ca = null;
+// ---- les sons et la petite musique, faits sur place (Web Audio) ; le bouton SON : tout, effets seulement, ou rien
+let caAc = null;
+const caAudio = () => { try { caAc ??= new AudioContext(); if (caAc.state === 'suspended') caAc.resume(); return caAc; } catch { return null; } };
+function caTone(f, d, {type = 'square', vol = .05, slide = 0, at = 0} = {}) {
+  if (!ca || ca.mode === 'check' || (caSave().snd || 0) === 2) return; const ac = caAudio(); if (!ac) return;
+  const t = ac.currentTime + at, o = ac.createOscillator(), g = ac.createGain(); o.type = type; o.frequency.setValueAtTime(f, t); if (slide) o.frequency.exponentialRampToValueAtTime(slide, t + d);
+  g.gain.setValueAtTime(vol, t); g.gain.exponentialRampToValueAtTime(.0001, t + d); o.connect(g).connect(ac.destination); o.start(t); o.stop(t + d + .02);
+}
+function caNoise(d, vol) {  // un souffle (bombe, pièce posée d'un coup)
+  if (!ca || ca.mode === 'check' || (caSave().snd || 0) === 2) return; const ac = caAudio(); if (!ac) return;
+  const n = Math.ceil(ac.sampleRate * d), buf = ac.createBuffer(1, n, ac.sampleRate), data = buf.getChannelData(0); for (let i = 0; i < n; i++) data[i] = (Math.random() * 2 - 1) * (1 - i / n) ** 2;
+  const src = ac.createBufferSource(), g = ac.createGain(), lp = ac.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = 900; g.gain.value = vol; src.buffer = buf; src.connect(lp).connect(g).connect(ac.destination); src.start();
+}
+const caSemi = (f, s) => f * 2 ** (s / 12);
+const CA_SFX = {
+  move: () => caTone(220, .03, {vol: .02}),
+  rot: () => caTone(440, .05, {vol: .025, slide: 660}),
+  hold: () => caTone(330, .08, {type: 'triangle', vol: .05, slide: 495}),
+  lock: () => caTone(120, .09, {type: 'triangle', vol: .08, slide: 70}),
+  drop: () => { caTone(170, .14, {type: 'triangle', vol: .1, slide: 55}); caNoise(.1, .06); },
+  clear: (rows, chain) => [0, 4, 7, 12].slice(0, 1 + Math.min(3, rows)).forEach((s, i) => caTone(caSemi(392, s + (chain - 1) * 2), .12, {at: i * .06, vol: .045})),
+  fusion: () => [0, 7, 12, 19].forEach((s, i) => caTone(caSemi(523, s), .2, {type: 'triangle', at: i * .045, vol: .06})),
+  boom: () => { caNoise(.5, .22); caTone(90, .4, {type: 'sawtooth', vol: .07, slide: 30}); },
+  gem: () => caTone(1568, .3, {type: 'sine', vol: .05, slide: 2093}),
+  chain: n => [0, 4, 7, 12, 16, 19].slice(0, Math.min(6, n + 2)).forEach((s, i) => caTone(caSemi(659, s), .1, {at: .18 + i * .05, vol: .04})),
+  over: () => [0, -3, -7, -12].forEach((s, i) => caTone(caSemi(330, s), .28, {type: 'triangle', at: i * .18, vol: .07})),
+  win: () => [0, 4, 7, 12, 7, 12].forEach((s, i) => caTone(caSemi(523, s), .14, {at: i * .1, vol: .045})),
+};
+// la musique : 32 croches en la mineur (la, fa, sol, mi), mélodie douce et basse ; elle accélère avec le niveau et ne joue que pendant la partie
+const CA_MEL = [12, null, 15, 17, 19, null, 17, 15, 12, null, 8, 12, 15, null, null, null, 14, null, 15, 17, 19, null, 22, 19, 16, null, 14, 12, 11, null, null, null];
+const CA_BASS = [-24, -12, -28, -16, -26, -14, -29, -17];
+const caMus = {step: 0, at: 0};
+function caMusic() {  // appelée à chaque image : prépare les notes du quart de seconde qui vient
+  if (!ca || ca.mode !== 'play' || (caSave().snd || 0) !== 0 || !caAc) { caMus.at = 0; return; }
+  const ac = caAc, eighth = 30 / Math.min(168, 108 + ca.level * 5);
+  if (caMus.at < ac.currentTime) caMus.at = ac.currentTime + .05;
+  while (caMus.at < ac.currentTime + .25) {
+    const i = caMus.step++ % 32, m = CA_MEL[i], at = caMus.at - ac.currentTime;
+    if (m != null) caTone(caSemi(440, m), eighth * 1.6, {type: 'square', vol: .014, at});
+    if (i % 2 === 0) caTone(caSemi(440, CA_BASS[(i >> 3) * 2 + (i % 8 === 4 ? 1 : 0)]), eighth * 1.8, {type: 'triangle', vol: .05, at});
+    caMus.at += eighth;
+  }
+}
 const CA_STAR = ['....y....', '...yyy...', '...ywy...', 'yyyyyyyyy', '.yyyyyyy.', '..yyyyy..', '..yy.yy..', '.yy...yy.', 'y.......y'];
 function caRot(cells) {  // a quarter turn clockwise, moved back to the top-left corner
   const r = cells.map(([x, y]) => [-y, x]), mx = Math.min(...r.map(c => c[0])), my = Math.min(...r.map(c => c[1]));
@@ -131,30 +176,30 @@ function caSpawn() {
   ca.held = false; ca.lock = 0; ca.moves = 0; ca.fallT = 0;
   if (!caFits(ca.cur.cells, ca.cur.x, ca.cur.y + 1) && !caFits(ca.cur.cells, ca.cur.x, ca.cur.y)) caOver(false);
 }
-function caMove(dx) { if (ca.cur && caFits(ca.cur.cells, ca.cur.x + dx, ca.cur.y)) { ca.cur.x += dx; caReset(); sfx('type'); return true; } return false; }
+function caMove(dx) { if (ca.cur && caFits(ca.cur.cells, ca.cur.x + dx, ca.cur.y)) { ca.cur.x += dx; caReset(); CA_SFX.move(); return true; } return false; }
 function caRotate(dir) {
   if (!ca.cur) return;
   let cells = ca.cur.cells; for (let i = 0; i < (dir > 0 ? 1 : 3); i++) cells = caRot(cells);
   for (const [dx, dy] of [[0, 0], [-1, 0], [1, 0], [0, -1], [-2, 0], [2, 0], [0, 1]]) if (caFits(cells, ca.cur.x + dx, ca.cur.y + dy)) {
     // the bomb pixel turns with the shard: same index in the list
-    ca.cur.cells = cells; ca.cur.x += dx; ca.cur.y += dy; caReset(); sfx('click'); return;
+    ca.cur.cells = cells; ca.cur.x += dx; ca.cur.y += dy; caReset(); CA_SFX.rot(); return;
   }
 }
 function caReset() { if (ca.lock > 0 && ca.moves < CA.MOVES) { ca.lock = 0; ca.moves++; } }
 function caGhostY() { let y = ca.cur.y; while (caFits(ca.cur.cells, ca.cur.x, y + 1)) y++; return y; }
-function caHardDrop() { if (!ca.cur) return; const y = caGhostY(); ca.score += (y - ca.cur.y) * 2; ca.cur.y = y; caLock(); }
+function caHardDrop() { if (!ca.cur) return; const y = caGhostY(); ca.score += (y - ca.cur.y) * 2; ca.cur.y = y; CA_SFX.drop(); caLock(); }
 function caHold() {
   if (!ca.cur || ca.held) return;
   const h = ca.hold; ca.hold = {cells: CA.shapes.find(s => s.n === ca.cur.n).c.map(p => [...p]), color: ca.cur.color, bomb: ca.cur.bomb, n: ca.cur.n};
   if (h) { const w = Math.max(...h.cells.map(c => c[0])) + 1; ca.cur = {...h, x: Math.floor((CA.COLS - w) / 2), y: -Math.max(...h.cells.map(c => c[1]))}; ca.lock = 0; ca.moves = 0; } else caSpawn();
-  ca.held = true; sfx('click');
+  ca.held = true; CA_SFX.hold();
 }
 function caLock() {
   const p = ca.cur; ca.cur = null; ca.pieces++;
   let above = false;
   p.cells.forEach(([cx, cy], i) => { const X = p.x + cx, Y = p.y + cy; if (Y < 0) above = true; else ca.board[Y][X] = {c: p.color, bomb: i === p.bomb}; });
   if (above) return caOver(false);
-  sfx('type'); ca.chain = 0;
+  CA_SFX.lock(); ca.chain = 0;
   caResolve();
 }
 // what breaks now: full rows (crystals included), then groups of 7 of one colour; bombs that break blow up their 3 x 3 square
@@ -183,10 +228,14 @@ function caResolve() {
   const pts = Math.round((base * lvl + f.fusions * 60 * f.hit.size / CA.FUSE + gems * 150 + bombs * 100) * mult);
   ca.score += pts; ca.rows += f.rows; ca.fusions += f.fusions; ca.gems += gems; ca.bestChain = Math.max(ca.bestChain, ca.chain);
   if (ca.kind === 'marathon') ca.level = 1 + Math.floor(ca.rows / 8);
-  const label = [f.rows > 1 ? f.rows + ' LIGNES' : f.rows ? 'LIGNE' : '', f.fusions ? 'FUSION' + (f.fusions > 1 ? ' x' + f.fusions : '') : '', bombs ? 'BOUM' : '', ca.chain > 1 ? 'CHAÎNE x' + ca.chain : ''].filter(Boolean).join(' · ');
+  const label = [f.rows > 1 ? f.rows + ' LIGNES' : f.rows ? 'LIGNE' : '', f.fusions ? 'FUSION' + (f.fusions > 1 ? ' x' + f.fusions : '') : '', bombs ? 'BOUM' : ''].filter(Boolean).join(' · ');
   ca.pops.push({text: label, pts, t: 70});
-  ca.clearing = f.hit; ca.phase = 'clear'; ca.anim = 0; ca.shake = bombs ? 10 : f.rows >= 3 ? 5 : 0;
-  sfx(ca.chain > 1 || f.rows >= 3 ? 'launch' : 'notify');
+  ca.clearing = f.hit; ca.phase = 'clear'; ca.anim = 0; ca.shake = Math.max(ca.shake, bombs ? 10 : f.rows >= 3 ? 5 : 0);
+  // ce qu'on voit et entend : un éclair sur le puits (couleur de la fusion), et pour une chaîne le gros « CHAÎNE ×N » qui tremble
+  const one = B[[...f.hit][0] / CA.COLS | 0][[...f.hit][0] % CA.COLS];
+  ca.flash = ca.chain > 1 || f.rows >= 3 || bombs ? 14 : 7; ca.flashCol = f.fusions && !f.rows && one.c >= 0 ? CA.col[one.c][1] : '#ffffff';
+  if (ca.chain > 1) { ca.chainFx = {n: ca.chain, t: 80}; ca.shake = Math.max(ca.shake, 4 + ca.chain * 2); CA_SFX.chain(ca.chain); }
+  if (f.rows) CA_SFX.clear(f.rows, ca.chain); if (f.fusions) CA_SFX.fusion(); if (bombs) CA_SFX.boom(); if (gems) CA_SFX.gem();
 }
 function caBurst() {  // the blocks that break fly away
   for (const k of ca.clearing) {
@@ -212,9 +261,9 @@ function caOver(won) {
   const s = caSave(); s.games++; s.rows += ca.rows; s.chain = Math.max(s.chain, ca.bestChain);
   if (ca.kind === 'challenge') {
     if (won) { const g = ca.goal, t = ca.time / 60, par = g.time ? t < g.time * .6 : g.pieces ? ca.pieces < g.pieces * .75 : ca.pieces < (g.rows || g.gems * 2 || g.fusions * 5 || g.chain * 8 || 30) * 1.6;
-      const stars = 1 + (ca.score >= 3000 * (ca.levelIdx + 1) * .4 ? 1 : 0) + (par ? 1 : 0); ca.got = stars; s.stars[ca.levelIdx] = Math.max(s.stars[ca.levelIdx] || 0, stars); sfx('launch'); }
-    else sfx('error');
-  } else { ca.record = best('cascade' + (ca.kind === 'zen' ? 'Zen' : ''), ca.score); sfx(ca.record ? 'launch' : 'error'); }
+      const stars = 1 + (ca.score >= 3000 * (ca.levelIdx + 1) * .4 ? 1 : 0) + (par ? 1 : 0); ca.got = stars; s.stars[ca.levelIdx] = Math.max(s.stars[ca.levelIdx] || 0, stars); CA_SFX.win(); }
+    else CA_SFX.over();
+  } else { ca.record = best('cascade' + (ca.kind === 'zen' ? 'Zen' : ''), ca.score); (ca.record ? CA_SFX.win : CA_SFX.over)(); }
   saveGames(); caInfo(); caMenu();
 }
 function caPress() {
@@ -225,6 +274,8 @@ function caPress() {
 function caUpdate() {
   ca.tick++; ca.time++;
   if (ca.shake) ca.shake--;
+  if (ca.flash) ca.flash--;
+  if (ca.chainFx && --ca.chainFx.t <= 0) ca.chainFx = null;
   for (const p of ca.parts) { p.x += p.vx; p.y += p.vy; p.vy += .15; p.t--; } ca.parts = ca.parts.filter(p => p.t > 0);
   for (const p of ca.pops) p.t--; ca.pops = ca.pops.filter(p => p.t > 0);
   if (ca.phase === 'clear') { if (++ca.anim >= 16) { caBurst(); ca.phase = 'drop'; ca.anim = 0; } return; }
@@ -232,9 +283,9 @@ function caUpdate() {
   if (!ca.cur) return;
   caCheckGoal(); if (ca.mode !== 'play') return;
   // held left / right: one step, then repeats quickly after a short wait
-  const d = (ca.keys.ArrowRight || ca.keys.d ? 1 : 0) - (ca.keys.ArrowLeft || ca.keys.q || ca.keys.a ? 1 : 0);
+  const d = (ca.keys.ArrowRight || ca.keys.d || ca.keys.padR ? 1 : 0) - (ca.keys.ArrowLeft || ca.keys.q || ca.keys.a || ca.keys.padL ? 1 : 0);
   if (d !== ca.dir) { ca.dir = d; ca.das = 0; if (d) caMove(d); } else if (d && ++ca.das > 10 && ca.das % 2 === 0) caMove(d);
-  const soft = ca.keys.ArrowDown || ca.keys.s, speed = ca.kind === 'zen' ? 48 : caSpeed();
+  const soft = ca.keys.ArrowDown || ca.keys.s || ca.keys.padD, speed = ca.kind === 'zen' ? 48 : caSpeed();
   if (++ca.fallT >= (soft ? Math.min(3, speed) : speed)) {
     ca.fallT = 0;
     if (caFits(ca.cur.cells, ca.cur.x, ca.cur.y + 1)) { ca.cur.y++; if (soft) ca.score += 1; ca.lock = 0; }
@@ -272,6 +323,7 @@ function caMini(g, p, cx, cy, s) {  // a piece drawn small and centred, for the 
 }
 function caDraw() {
   const g = ca.g, t = ca.tick, B = ca.board, S = CA.S;
+  caMusic();
   g.save();
   if (ca.shake) g.translate(Math.round((Math.random() - .5) * ca.shake), Math.round((Math.random() - .5) * ca.shake));
   // sky: a dark gradient whose hue follows the level, twinkling stars
@@ -296,6 +348,14 @@ function caDraw() {
     ca.cur.cells.forEach(([cx, cy], i) => { const y = ca.cur.y + cy; if (y >= 0) caBlock(g, CA.X + (ca.cur.x + cx) * S, CA.Y + y * S, S, {c: ca.cur.color, bomb: i === ca.cur.bomb}, t); });
   }
   for (const p of ca.parts) { g.fillStyle = p.col; g.fillRect(p.x | 0, p.y | 0, 2, 2); }
+  if (ca.flash) { g.globalAlpha = ca.flash / 14 * .55; g.fillStyle = ca.flashCol; g.fillRect(CA.X, CA.Y, CA.COLS * S, CA.ROWS * S); g.globalAlpha = 1; }
+  if (ca.chainFx) {  // « CHAÎNE ×N » en gros au-dessus du puits : il grossit en arrivant, change de couleur, puis s'efface
+    const c = ca.chainFx, cx = CA.X + CA.COLS * S / 2, y = CA.Y + 40 + Math.round(Math.sin(c.t / 3) * 2), big = c.t > 72 ? 16 : c.t > 66 ? 32 : 24, col = ['#ff5ad9', '#7fe0ee', '#ffd07a', '#8ee8a0'][(c.t >> 2) % 4];
+    g.globalAlpha = Math.min(1, c.t / 16); g.textAlign = 'center';
+    for (const [txt, size, yy, cc] of [['CHAINE', 16, y, '#ffffff'], ['×' + c.n, big, y + 8 + big, col]]) { g.font = size + 'px "Press Start 2P", monospace'; g.fillStyle = '#05010b'; g.fillText(txt, cx + 2, yy + 2); g.fillStyle = cc; g.fillText(txt, cx, yy); }
+    for (const [d, cc] of [[2, '#05010b'], [0, '#ffffff']]) { const ix = cx + 8 + d, iy = y - 20 + d; g.fillStyle = cc; g.fillRect(ix - 5, iy + 2, 3, 2); g.fillRect(ix - 2, iy, 4, 2); g.fillRect(ix + 2, iy + 2, 3, 2); }  // l'accent de « CHAÎNE », que la police n'a pas
+    g.textAlign = 'left'; g.globalAlpha = 1;
+  }
   // side panel
   const px0 = 162, label = (s, y) => { g.fillStyle = '#8f7bb8'; g.font = '6px "Press Start 2P", monospace'; g.fillText(s, px0, y); }, value = (s, y, c = '#ffffff') => { g.fillStyle = c; g.font = '8px "Press Start 2P", monospace'; g.fillText(s, px0, y); };
   label('SUIVANT', 30); ca.next.slice(0, 3).forEach((p, i) => { g.fillStyle = 'rgba(5,1,11,.6)'; g.fillRect(px0, 36 + i * 34, 66, 30); caMini(g, p, px0 + 33, 51 + i * 34, i ? 6 : 8); });
@@ -346,17 +406,45 @@ document.addEventListener('keydown', e => {
   else if (k === 'c' || k === 'Shift') caHold();
 });
 document.addEventListener('keyup', e => { if (!ca) return; const k = e.key.length === 1 ? e.key.toLowerCase() : e.key; ca.keys[k] = false; });
-{  // self-check: a quarter turn four times gives the shape back, a full row and a fusion of 7 are found, crystals fall like the rest
-  const keep = ca;
-  ca = {board: Array.from({length: CA.ROWS}, () => Array(CA.COLS).fill(null)), hist: []};
+function caCheck() {  // vérification : un quart de tour quatre fois rend la forme, une ligne et une fusion de 9 sont trouvées, les cristaux tombent comme le reste,
+  // une ligne qui en fait tomber une autre donne une chaîne de 2, avec l'éclair et le texte ; renvoie 'ok' ou ce qui ne va pas
+  const keep = ca, bad = [], empty = () => Array.from({length: CA.ROWS}, () => Array(CA.COLS).fill(null));
+  ca = {board: empty(), hist: [], mode: 'check'};
   const s = CA.shapes.find(x => x.n === 'L5').c, back = caRot(caRot(caRot(caRot(s))));
+  if (JSON.stringify(back) !== JSON.stringify(s)) bad.push('rotation');
   for (let c = 0; c < CA.COLS; c++) ca.board[19][c] = {c: c % 2};
-  for (let i = 0; i < 7; i++) ca.board[18 - (i / 5 | 0)][i % 5] = {c: 3};
+  for (let i = 0; i < CA.FUSE; i++) ca.board[18 - (i / 5 | 0)][i % 5] = {c: 3};
   ca.board[10][4] = {c: -1, gem: true};
   const f = caFind(); while (caGravity());
-  console.assert(JSON.stringify(back) === JSON.stringify(s) && f.rows === 1 && f.fusions === 1 && f.hit.size === 17 && ca.board[17][4]?.gem, 'cascade rules');
+  if (!(f.rows === 1 && f.fusions === 1 && f.hit.size === 10 + CA.FUSE)) bad.push('ligne et fusion ' + JSON.stringify({rows: f.rows, fusions: f.fusions, hit: f.hit.size}));
+  if (!ca.board[17][4]?.gem) bad.push('cristal');
+  // la chaîne : la ligne 18 pleine se casse, le bloc de la ligne 17 (colonne 9) tombe dans le trou de la ligne 19, qui est alors pleine
+  ca = {board: empty(), hist: [], mode: 'check', chain: 0, score: 0, rows: 0, level: 1, fusions: 0, gems: 0, bestChain: 0, kind: 'zen', goal: null, pops: [], parts: [], shake: 0, flash: 0, tick: 0, time: 0, phase: 'fall'};
+  for (let c = 0; c < CA.COLS; c++) { ca.board[18][c] = {c: (c + 1) % 2}; if (c < 9) ca.board[19][c] = {c: c % 2}; }
+  ca.board[17][9] = {c: 4};
+  caResolve(); let sawFx = false;
+  for (let i = 0; i < 300; i++) { caUpdate(); if (ca.chainFx?.n === 2 && ca.flash) sawFx = true; }
+  if (ca.bestChain !== 2 || ca.rows !== 2) bad.push('chaîne ' + ca.bestChain + ' / ' + ca.rows + ' lignes');
+  if (!sawFx) bad.push('effets de chaîne');
   ca = keep;
-}  // (non indenté : les textes sur plusieurs lignes restent exactement les tiens)
+  return bad.length ? bad.join(', ') : 'ok';
+}
+console.assert(caCheck() === 'ok', 'cascade', caCheck());
+$('caCanvas').__ca = {st: () => ca, check: caCheck, CA, resolve: () => caResolve()};  // pour l'auto-test
+// la manette : croix ou stick pour déplacer et descendre vite, haut pour poser d'un coup, A et B pour tourner, X ou LB / RB pour la réserve, Start pour la pause
+{ let prev = [];
+  const loop = () => { requestAnimationFrame(loop); if (!view.classList.contains('on') || !ca) return;
+    const p = [...(navigator.getGamepads?.() || [])].find(Boolean); if (!p) return;
+    const b = i => !!p.buttons[i]?.pressed, ax = p.axes[0] || 0, ay = p.axes[1] || 0;
+    const now = [b(14) || ax < -.5, b(15) || ax > .5, b(13) || ay > .5, b(12) || ay < -.6, b(0), b(1), b(2) || b(4) || b(5), b(9)], hit = i => now[i] && !prev[i];
+    if (ca.mode === 'play') { [ca.keys.padL, ca.keys.padR, ca.keys.padD] = now; if (hit(3)) caHardDrop(); if (hit(4)) caRotate(1); if (hit(5)) caRotate(-1); if (hit(6)) caHold(); if (hit(7)) ca.mode = 'pause'; }
+    else { ca.keys.padL = ca.keys.padR = ca.keys.padD = false; if (hit(4) || hit(7)) caPress(); }
+    prev = now; };
+  requestAnimationFrame(loop); }
+$('caFs').onclick = () => { $('caFs').blur(); if (document.fullscreenElement) document.exitFullscreen(); else $('caCanvas').parentElement.requestFullscreen?.().catch(() => {}); };
+const CA_SND = ['SON : TOUT', 'SON : EFFETS', 'SON : COUPÉ'];
+$('caSnd').onclick = () => { const s = caSave(); s.snd = ((s.snd || 0) + 1) % 3; saveGames(); $('caSnd').textContent = CA_SND[s.snd]; $('caSnd').blur(); };
+$('caSnd').textContent = CA_SND[caSave().snd || 0];  // (non indenté : les textes sur plusieurs lignes restent exactement les tiens)
   // ---- fin ----
   ctx.onOpen(() => { caOpen(); });
 }
