@@ -1,7 +1,7 @@
 {
   "id": "neodex.cascade",
   "name": "Cascade",
-  "version": "1.2.1",
+  "version": "1.2.2",
   "author": "NDesumeur",
   "description": "Des pièces de 3 à 5 blocs tombent dans un puits de 10 × 20 : complète des lignes pour les casser, mais aussi des groupes de 9 blocs de la même couleur. Ce qui reste suspendu retombe et peut déclencher des chaînes qui multiplient les points ; bombes, cristaux et réserve. Marathon qui accélère toutes les 8 lignes, Zen sans accélération, et 24 défis à trois étoiles. Jouable à la manette, en plein écran, avec ses sons et une petite musique qui accélère avec le niveau ; les chaînes font flasher et trembler le puits.",
   "icon": "icon.png",
@@ -14,8 +14,8 @@
     "windows",
     "linux"
   ],
-  "syncMode": "progression",
-  "syncInfo": "Record, niveau.",
+  "syncMode": "aucune",
+  "syncInfo": "Rien n'est synchronisé : tes records restent sur cet appareil.",
   "mobile": false,
   "system": false,
   "dependencies": {},

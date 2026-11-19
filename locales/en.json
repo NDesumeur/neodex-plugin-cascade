@@ -50,7 +50,6 @@
  "Précision": "Precision",
  "RATÉ": "MISSED",
  "Record marathon :": "Marathon record:",
- "Record, niveau.": "Record, level.",
  "RÉSERVE C": "RESERVE C",
  "Réaction": "Reaction",
  "SCORE": "SCORE",
@@ -79,5 +78,6 @@
  "CHAINE": "CHAIN",
  "ligne et fusion": "line and merge",
  "chaîne": "chain",
- "effets de chaîne": "chain effects"
+ "effets de chaîne": "chain effects",
+ "Rien n'est synchronisé : tes records restent sur cet appareil.": "Nothing is synced: your records stay on this device."
 }
