@@ -1,7 +1,7 @@
 // Cascade : ton appli d'origine (HTML et code inchangés), livrée en plugin.
 // Ses données sont dans le dossier du plugin, que NeoDex sauvegarde (synchro cloud et sauvegardes) ; à la première ouverture elle reprend ce que tu avais dans NeoDex.
 // Elle tourne dans le bac à sable de NeoDex, avec ses outils d'interface (ctx.host) et seulement les autorisations de son plugin.json.
-const HTML = "<div class=\"appWrap\">\n      <div class=\"agHead\"><span class=\"label\">Cascade</span><span class=\"hint\" id=\"caInfo\"></span><div class=\"agNav\"><select class=\"f gSel\" id=\"caMode\" title=\"Mode de jeu\"></select></div></div>\n      <div class=\"gameBox tall\"><canvas id=\"caCanvas\" width=\"240\" height=\"320\" tabindex=\"0\"></canvas></div>\n      <div class=\"row\" style=\"justify-content:center;margin-top:8px\"><button class=\"btn px\" id=\"caSnd\">SON : TOUT</button><button class=\"btn px\" id=\"caFs\">PLEIN ÉCRAN</button></div>\n      <div class=\"hint\">← → ou Q D : déplacer · ↑, X ou W : tourner (Z : dans l'autre sens) · ↓ : descendre vite · espace : poser d'un coup · C ou Maj : réserve · P ou Échap : pause. Manette : croix ou stick pour déplacer, bas pour descendre vite, haut pour poser d'un coup, A et B pour tourner, X ou les gâchettes pour la réserve, Start pour la pause. Une ligne pleine se casse, et aussi tout groupe de 9 blocs de la même couleur (fusion). Les blocs qui pendent retombent ensuite un par un : de nouvelles lignes ou fusions font des chaînes qui multiplient les points. Les cristaux ne se cassent qu'avec une ligne ; une bombe fait sauter le carré autour d'elle. Marathon, Zen ou 24 défis à trois étoiles, sauvegardés et synchronisés.</div>\n    </div>";
+const HTML = "<div class=\"appWrap\">\n      <div class=\"agHead\"><span class=\"label\">Cascade</span><span class=\"hint\" id=\"caInfo\"></span><div class=\"agNav\"><select class=\"f gSel\" id=\"caMode\" title=\"Mode de jeu\"></select></div></div>\n      <div class=\"gameBox tall\"><canvas id=\"caCanvas\" width=\"240\" height=\"320\" tabindex=\"0\"></canvas></div>\n      <div class=\"row\" style=\"justify-content:center;margin-top:8px\"><button class=\"btn px\" id=\"caSnd\">SON : TOUT</button><button class=\"btn px\" id=\"caFs\">PLEIN ÉCRAN</button></div><div class=\"row caTune\"><label>Délai avant répétition <select class=\"f gSel\" id=\"caDas\"></select></label><label>Répétition <select class=\"f gSel\" id=\"caArr\"></select></label><label>Descente rapide <select class=\"f gSel\" id=\"caSdf\"></select></label></div>\n      <div class=\"hint\">← → ou Q D : déplacer · ↑, X ou W : tourner (Z : dans l'autre sens) · ↓ : descendre vite · espace : poser d'un coup · C ou Maj : réserve · P ou Échap : pause. Manette : croix ou stick pour déplacer, bas pour descendre vite, haut pour poser d'un coup, A et B pour tourner, X ou les gâchettes pour la réserve, Start pour la pause. Une ligne pleine se casse, et aussi tout groupe de 9 blocs de la même couleur (fusion). Les blocs qui pendent retombent ensuite un par un : de nouvelles lignes ou fusions font des chaînes qui multiplient les points. Les cristaux ne se cassent qu'avec une ligne ; une bombe fait sauter le carré autour d'elle. Marathon, Zen ou 24 défis à trois étoiles, sauvegardés et synchronisés.</div>\n    </div>";
 /*CSS-MOVED*/ const CSS = `.gameBox{display:grid;place-items:center;padding:10px;background:#05010b;box-shadow:0 0 0 3px var(--line2)}
 .gameBox canvas{width:min(100%,1152px);aspect-ratio:384/144;image-rendering:pixelated;cursor:var(--cp,pointer)}
 .gameBox.tall canvas{width:min(100%,max(240px,calc((100vh - 270px) * 240 / 320)));height:auto;aspect-ratio:240/320}
@@ -9,6 +9,7 @@ const HTML = "<div class=\"appWrap\">\n      <div class=\"agHead\"><span class=\
 .gameBox.tall:fullscreen canvas{width:min(100vw,calc(100vh * 240 / 320))}
 .gSel{width:auto;font-size:14px;padding:6px 10px;margin-right:8px}
 .tqTile.hole{transition:opacity .4s}
+.caTune{justify-content:center;flex-wrap:wrap;gap:6px 14px;margin-top:8px}.caTune label{display:flex;align-items:center;gap:6px}
 `;  // le style de ce plugin (il utilise les variables du thème de NeoDex)
 export default async function (ctx) {
   const view = ctx.view;
@@ -283,10 +284,13 @@ function caUpdate() {
   if (!ca.cur) return;
   caCheckGoal(); if (ca.mode !== 'play') return;
   // held left / right: one step, then repeats quickly after a short wait
+  // les réglages des joueurs exigeants : délai avant la répétition (DAS), vitesse de la répétition (ARR, 0 = jusqu'au bord), descente rapide (0 = jusqu'en bas)
+  const S = caSave(), DAS = S.das ?? 10, ARR = S.arr ?? 2, SDF = S.sdf ?? 3;
   const d = (ca.keys.ArrowRight || ca.keys.d || ca.keys.padR ? 1 : 0) - (ca.keys.ArrowLeft || ca.keys.q || ca.keys.a || ca.keys.padL ? 1 : 0);
-  if (d !== ca.dir) { ca.dir = d; ca.das = 0; if (d) caMove(d); } else if (d && ++ca.das > 10 && ca.das % 2 === 0) caMove(d);
+  if (d !== ca.dir) { ca.dir = d; ca.das = 0; if (d) caMove(d); } else if (d && ++ca.das > DAS) { if (!ARR) { while (caMove(d)); } else if ((ca.das - DAS) % ARR === 0) caMove(d); }
   const soft = ca.keys.ArrowDown || ca.keys.s || ca.keys.padD, speed = ca.kind === 'zen' ? 48 : caSpeed();
-  if (++ca.fallT >= (soft ? Math.min(3, speed) : speed)) {
+  if (soft && !SDF) while (caFits(ca.cur.cells, ca.cur.x, ca.cur.y + 1)) { ca.cur.y++; ca.score += 1; ca.lock = 0; }
+  if (++ca.fallT >= (soft ? Math.min(SDF || 1, speed) : speed)) {
     ca.fallT = 0;
     if (caFits(ca.cur.cells, ca.cur.x, ca.cur.y + 1)) { ca.cur.y++; if (soft) ca.score += 1; ca.lock = 0; }
   }
@@ -426,6 +430,12 @@ function caCheck() {  // vérification : un quart de tour quatre fois rend la fo
   for (let i = 0; i < 300; i++) { caUpdate(); if (ca.chainFx?.n === 2 && ca.flash) sawFx = true; }
   if (ca.bestChain !== 2 || ca.rows !== 2) bad.push('chaîne ' + ca.bestChain + ' / ' + ca.rows + ' lignes');
   if (!sawFx) bad.push('effets de chaîne');
+  { const sv = caSave(), kd = sv.das, ka = sv.arr, ks = sv.sdf; sv.das = 6; sv.arr = 0; sv.sdf = 0;
+    ca = {board: empty(), hist: [], mode: 'play', kind: 'zen', phase: 'fall', keys: {ArrowRight: true}, dir: 1, das: 0, fallT: 0, lock: 0, moves: 0, score: 0, parts: [], pops: [], tick: 0, time: 0, level: 1, rows: 0, goal: null, cur: {cells: [[0, 0]], x: 0, y: 0, c: 0}};
+    for (let i = 0; i < 6; i++) caUpdate(); const x6 = ca.cur.x; caUpdate(); const xEnd = ca.cur.x;
+    ca.keys = {ArrowDown: true}; caUpdate(); const yEnd = ca.cur.y;
+    if (x6 !== 0 || xEnd !== CA.COLS - 1 || yEnd !== CA.ROWS - 1) bad.push('réglages ' + [x6, xEnd, yEnd]);
+    Object.assign(sv, {das: kd, arr: ka, sdf: ks}); for (const k of ['das', 'arr', 'sdf']) if (sv[k] === undefined) delete sv[k]; }
   ca = keep;
   return bad.length ? bad.join(', ') : 'ok';
 }
@@ -444,7 +454,13 @@ $('caCanvas').__ca = {st: () => ca, check: caCheck, CA, resolve: () => caResolve
 $('caFs').onclick = () => { $('caFs').blur(); if (document.fullscreenElement) document.exitFullscreen(); else $('caCanvas').parentElement.requestFullscreen?.().catch(() => {}); };
 const CA_SND = ['SON : TOUT', 'SON : EFFETS', 'SON : COUPÉ'];
 $('caSnd').onclick = () => { const s = caSave(); s.snd = ((s.snd || 0) + 1) % 3; saveGames(); $('caSnd').textContent = CA_SND[s.snd]; $('caSnd').blur(); };
-$('caSnd').textContent = CA_SND[caSave().snd || 0];  // (non indenté : les textes sur plusieurs lignes restent exactement les tiens)
+$('caSnd').textContent = CA_SND[caSave().snd || 0];
+// les menus des réglages : en millisecondes (une image = 1/60 s)
+for (const [id, key, def, opts] of [['caDas', 'das', 10, [4, 6, 8, 10, 12, 16]], ['caArr', 'arr', 2, [0, 1, 2, 3, 4]], ['caSdf', 'sdf', 3, [3, 1, 0]]]) {
+  const sel = $(id), ms = n => Math.round(n * 1000 / 60) + ' ms';
+  sel.replaceChildren(...opts.map(n => Object.assign(el('option', '', key === 'sdf' ? ['instantanée', 'très rapide', '', 'normale'][n] : !n ? 'instantanée' : ms(n) + (n === def ? ' (de base)' : '')), {value: n})));
+  sel.value = String(caSave()[key] ?? def); sel.onchange = () => { caSave()[key] = +sel.value; saveGames(); sel.blur(); };
+}  // (non indenté : les textes sur plusieurs lignes restent exactement les tiens)
   // ---- fin ----
   ctx.onOpen(() => { caOpen(); });
 }

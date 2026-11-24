@@ -4,6 +4,14 @@ A falling-blocks game with one extra idea: besides full rows, groups of 9 blocks
 
 *Version française : [README.md](README.md)*
 
+## Fine settings (new in 1.3.0)
+
+Under the game, three settings for demanding players, saved and synced:
+- **Delay before repeat** (DAS): how long to hold ← or → before the piece slides by itself (67 to 267 ms, 167 ms by default).
+- **Repeat** (ARR): how fast it slides after that (17 to 67 ms, or "instant": straight to the wall).
+- **Soft drop**: normal, very fast, or instant (↓ brings the piece to the bottom without locking it).
+The first step always happens right away, as soon as you press.
+
 ## Controls
 
 - **← →** or **Q D** (A D on a QWERTY keyboard): move the piece.

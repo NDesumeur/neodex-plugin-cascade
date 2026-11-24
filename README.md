@@ -4,6 +4,14 @@ Un jeu de blocs qui tombent, avec une idée en plus : en plus des lignes pleines
 
 *English version: [README.en.md](README.en.md)*
 
+## Réglages fins (nouveau en 1.3.0)
+
+Sous le jeu, trois réglages pour les joueurs exigeants, gardés et synchronisés :
+- **Délai avant répétition** (DAS) : combien de temps tenir ← ou → avant que la pièce file toute seule (67 à 267 ms, 167 ms de base).
+- **Répétition** (ARR) : la vitesse à laquelle elle file ensuite (17 à 67 ms, ou « instantanée » : d'un coup jusqu'au bord).
+- **Descente rapide** : normale, très rapide, ou instantanée (↓ amène la pièce en bas sans la poser).
+Le premier pas se fait toujours tout de suite, dès l'appui.
+
 ## Commandes
 
 - **← →** ou **Q D** : déplacer la pièce.

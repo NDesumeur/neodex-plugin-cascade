@@ -69,7 +69,6 @@
  "· défis :": "· challenges:",
  "Économie": "Economy",
  "★ · meilleure chaîne": "★ · best channel",
- "Des pièces de 3 à 5 blocs tombent dans un puits de 10 × 20 : complète des lignes pour les casser, mais aussi des groupes de 9 blocs de la même couleur. Ce qui reste suspendu retombe et peut déclencher des chaînes qui multiplient les points ; bombes, cristaux et réserve. Marathon qui accélère toutes les 8 lignes, Zen sans accélération, et 24 défis à trois étoiles. Jouable à la manette, en plein écran, avec ses sons et une petite musique qui accélère avec le niveau ; les chaînes font flasher et trembler le puits.": "Pieces of 3 to 5 blocks fall into a 10 × 20 well: complete rows to break them, and also groups of 9 blocks of the same colour. Whatever is left hanging falls and can set off chains that multiply the points; bombs, crystals and a hold slot. Marathon that speeds up every 8 rows, Zen with no speed-up, and 24 three-star challenges. Playable with a gamepad, in fullscreen, with its own sounds and a little tune that speeds up with the level; chains flash and shake the well.",
  "← → ou Q D : déplacer · ↑, X ou W : tourner (Z : dans l'autre sens) · ↓ : descendre vite · espace : poser d'un coup · C ou Maj : réserve · P ou Échap : pause. Manette : croix ou stick pour déplacer, bas pour descendre vite, haut pour poser d'un coup, A et B pour tourner, X ou les gâchettes pour la réserve, Start pour la pause. Une ligne pleine se casse, et aussi tout groupe de 9 blocs de la même couleur (fusion). Les blocs qui pendent retombent ensuite un par un : de nouvelles lignes ou fusions font des chaînes qui multiplient les points. Les cristaux ne se cassent qu'avec une ligne ; une bombe fait sauter le carré autour d'elle. Marathon, Zen ou 24 défis à trois étoiles, sauvegardés et synchronisés.": "← → or Q D: move · ↑, X or W: rotate (Z: the other way) · ↓: soft drop · space: hard drop · C or Shift: hold · P or Esc: pause. Gamepad: d-pad or stick to move, down to soft drop, up to hard drop, A and B to rotate, X or the bumpers to hold, Start to pause. A full row breaks, and so does any group of 9 blocks of the same colour (fusion). Blocks left hanging then fall one by one: new rows or fusions make chains that multiply the points. Crystals only break with a row; a bomb blows up the square around it. Marathon, Zen or 24 three-star challenges, saved and synced.",
  "SON : TOUT": "SOUND: ALL",
  "SON : EFFETS": "SOUND: EFFECTS",
@@ -79,5 +78,14 @@
  "ligne et fusion": "line and merge",
  "chaîne": "chain",
  "effets de chaîne": "chain effects",
- "Rien n'est synchronisé : tes records restent sur cet appareil.": "Nothing is synced: your records stay on this device."
+ "Rien n'est synchronisé : tes records restent sur cet appareil.": "Nothing is synced: your records stay on this device.",
+ "Délai avant répétition": "Delay before repeat",
+ "Répétition": "Repeat",
+ "Descente rapide": "Soft drop",
+ "réglages": "settings",
+ "instantanée": "instant",
+ "très rapide": "very fast",
+ "normale": "normal",
+ "(de base)": "(default)",
+ "Des pièces de 3 à 5 blocs tombent dans un puits de 10 × 20 : complète des lignes pour les casser, mais aussi des groupes de 9 blocs de la même couleur. Ce qui reste suspendu retombe et peut déclencher des chaînes qui multiplient les points ; bombes, cristaux et réserve. Marathon qui accélère toutes les 8 lignes, Zen sans accélération, et 24 défis à trois étoiles. Jouable à la manette, en plein écran, avec ses sons et une petite musique qui accélère avec le niveau ; les chaînes font flasher et trembler le puits. Réglages fins : délai avant répétition, vitesse de répétition et descente rapide.": "Pieces of 3 to 5 blocks fall into a 10 × 20 well: complete rows to break them, and also groups of 9 blocks of the same colour. Whatever is left hanging falls and can set off chains that multiply the points; bombs, crystals and a hold slot. Marathon that speeds up every 8 rows, Zen with no speed-up, and 24 three-star challenges. Playable with a gamepad, in fullscreen, with its own sounds and a little tune that speeds up with the level; chains flash and shake the well. Fine settings: delay before repeat, repeat speed and soft drop."
 }
