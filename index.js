@@ -32,6 +32,9 @@ export default async function (ctx) {
   const saveGames = () => { clearTimeout(gamesTimer); gamesTimer = setTimeout(() => { gamesTimer = null; folder.write('games', games).catch(() => {}); }, 500); };
   const best = (k, v, higher = true) => { const b = games.best[k]; if (b == null || (higher ? v > b : v < b)) { games.best[k] = v; saveGames(); return true; } return false; };
   const gstore = (k, init) => (games[k] ??= init);  // la section d'un jeu
+  // les trophées de NeoDex (3.4.8 et plus) : succès et records déclarés dans plugin.json ; sur un NeoDex plus ancien, rien ne se passe
+  const trophy = id => { ctx.games?.unlock(id).catch(() => {}); };
+  const trophyRecord = (id, v) => { if (v != null && Number.isFinite(+v)) ctx.games?.record(id, +v).catch(() => {}); };
 function gameLoop(st, appKey, update, draw) {
   cancelAnimationFrame(st.raf);
   const STEP = 1000 / 60; let acc = 0, last = performance.now();
@@ -265,7 +268,7 @@ function caOver(won) {
       const stars = 1 + (ca.score >= 3000 * (ca.levelIdx + 1) * .4 ? 1 : 0) + (par ? 1 : 0); ca.got = stars; s.stars[ca.levelIdx] = Math.max(s.stars[ca.levelIdx] || 0, stars); CA_SFX.win(); }
     else CA_SFX.over();
   } else { ca.record = best('cascade' + (ca.kind === 'zen' ? 'Zen' : ''), ca.score); (ca.record ? CA_SFX.win : CA_SFX.over)(); }
-  saveGames(); caInfo(); caMenu();
+  saveGames(); caInfo(); caMenu(); caTrophies();
 }
 function caPress() {
   if (!ca) return;
@@ -410,6 +413,14 @@ document.addEventListener('keydown', e => {
   else if (k === 'c' || k === 'Shift') caHold();
 });
 document.addEventListener('keyup', e => { if (!ca) return; const k = e.key.length === 1 ? e.key.toLowerCase() : e.key; ca.keys[k] = false; });
+// les trophées, tirés des records et des défis (aussi à l'ouverture : ce qui a été fait avant compte) ; jamais pendant la vérification
+function caTrophies() {
+  if (ca?.mode === 'check') return;
+  const s = caSave(), done = Object.keys(s.stars || {}).length, stars = Object.values(s.stars || {}).reduce((t, x) => t + x, 0), m = games.best.cascade || 0;
+  trophyRecord('marathon', games.best.cascade); trophyRecord('zen', games.best.cascadeZen);
+  if (s.chain >= 3) trophy('chaine-3'); if (s.chain >= 5) trophy('chaine-5'); if (m >= 10000) trophy('marathon-10000'); if (m >= 50000) trophy('marathon-50000');
+  if (done >= 12) trophy('defis-12'); if (done >= CA_LEVELS.length) trophy('defis-24'); if (stars >= CA_LEVELS.length * 3) trophy('etoiles'); if (s.rows >= 1000) trophy('lignes-1000');
+}
 function caCheck() {  // vérification : un quart de tour quatre fois rend la forme, une ligne et une fusion de 9 sont trouvées, les cristaux tombent comme le reste,
   // une ligne qui en fait tomber une autre donne une chaîne de 2, avec l'éclair et le texte ; renvoie 'ok' ou ce qui ne va pas
   const keep = ca, bad = [], empty = () => Array.from({length: CA.ROWS}, () => Array(CA.COLS).fill(null));
@@ -462,5 +473,5 @@ for (const [id, key, def, opts] of [['caDas', 'das', 10, [4, 6, 8, 10, 12, 16]],
   sel.value = String(caSave()[key] ?? def); sel.onchange = () => { caSave()[key] = +sel.value; saveGames(); sel.blur(); };
 }  // (non indenté : les textes sur plusieurs lignes restent exactement les tiens)
   // ---- fin ----
-  ctx.onOpen(() => { caOpen(); });
+  ctx.onOpen(() => { caOpen(); caTrophies(); });
 }
